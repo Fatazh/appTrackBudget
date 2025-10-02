@@ -15,3 +15,68 @@ datasource db {
   directUrl = env("DIRECT_DATABASE_URL")
 }
 
+// user
+model User{
+  id        String    @id @default(uuid()) @db.Uuid
+  fullName  String    @map("full_name")
+  email     String    @unique
+  password  String    @map("password_hash")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updateAt  DateTime  @map("updated_at")
+
+//relation
+session         Session[]
+categories      Categories[]
+paymentSources  PaymentSources[]
+units           Units[]
+incomes         Incomes[]
+expenses        Expenses[]
+
+@@map("users")
+}
+
+///session
+model Session{
+  id            String    @id @default(uuid()) @db.Uuid
+  sessionToken  String    @unique   @map("session_token")
+  userId        String    @db.Uuid  @map("user_id")
+  expires       DateTime
+
+  //Relations
+  user User @relation(field: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+//Categories (self-references)
+model Categories{
+  id        Int      @id @default(autoincrement())
+  userId    String   db.Uuid @map("user_id")
+  name      String
+
+  ///Relations
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses  Expenses[]
+
+  @@index)[userId]
+  @@map("categories")
+}
+
+///sub-categories
+model SubCategories{
+  id          Int     @id @default(autoincrement())
+  userId      String  @db.Uuid @map("user_id")
+  categoryId  Int?    @map("categories_id")
+  name        String
+
+  //Relations
+  user        User        @relation(fields: [userId], references:[id], onDelete:Cascade)
+  categories  Categories  @relation(fields:[categoryId], references:[id], onDelete:Cascade)
+
+  @@index([userId])
+  @@index([categoryId])
+  @@map(""subCategories)
+
+}
+
