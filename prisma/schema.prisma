@@ -22,7 +22,7 @@ model User{
   email     String    @unique
   password  String    @map("password_hash")
   createdAt DateTime  @default(now()) @map("created_at")
-  updateAt  DateTime  @map("updated_at")
+  updateAt  DateTime? @db.DateTime @map("updated_at")
 
 //relation
 session         Session[]
@@ -76,7 +76,73 @@ model SubCategories{
 
   @@index([userId])
   @@index([categoryId])
-  @@map(""subCategories)
+  @@map(""sub_categories)
 
 }
 
+/// paymentSources
+model PaymentSources{
+  id              Int     @id @default(autoincrement())
+  userId          String  @db.Uuid @map("user_id")
+  name            String
+  initialBalance  Decimal @default(0) @db.Decimal(15,2) @map("initial_balance")
+
+  //relation
+  user      User    @relation(fields: [userId], references: [id], onDelete:Cascade)
+  incomes   Incomes[]
+  expenses  Expenses[]
+
+  @@index([userId])
+  @@map("payment_sources")
+}
+
+///units
+model Unit{
+  id            @id       @default(autoincrement())
+  userId        @String   @db.Uuid  @map("user_id")
+  name          @String
+  abbreviation  @String?  @db.VaeChar(50)
+
+  //relation
+  user          User    @relation(fields:[userId], references: [id], onDelete:Cascade)
+  expenses      Expenses[]
+
+  @@index([userId])
+  @@map("units")
+}
+
+//Incomes
+model Income{
+  id               Int        @id @default(autoincrement())
+  userId           String     @db.Uuid  @map("user_id")
+  amount           Decimal    @db.Decimal(15, 2)
+  description      String?    @db.Text
+  incomeDate       DateTime   @db.Date  @map("income_date")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updateAt         DateTime?  @map("updated_at")
+  paymentSourceId  Int        @map("payment_source_id")
+
+  //relation
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentSource PaymentSource @relation(fields:[paymentSourceId], references:[id], onDelete:Cascade)
+
+
+  @@index([userId])
+  @@index([paymentSourceId])
+  @@map("incomes")
+}
+
+///Expenses
+model Expense{
+  id            Int       @id @default(autoincrement())
+  userId        String    @db.Uuid  @map("user_id")
+  productName   String    @map("product_name")
+  quantity      Decimal   @db.Decimal(10, 2)
+  unitPrice     Decimal   @db.Decimal(15, 2) @map("unit_price")
+  finalPrice    Decimal   @db.Decimal(15, 2) @map("final_price")
+  purchaseDate  DateTime  @map("purchase_date")
+  description   String?   @db.Text
+  isPromo       Boolean   @default(false) @map("is_promo")
+  createdAt     DateTime  @default(false) @map("created_at")
+  updateAt      DateTime? @map("updated_at")
+}
