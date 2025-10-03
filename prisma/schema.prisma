@@ -80,3 +80,19 @@ model SubCategories{
 
 }
 
+///merchants
+model Merchants{
+  id        Int    @id  @default(autoincrement())
+  userId    String @db.Uuid @map("user_id")
+  name      String
+
+
+  //Relations
+  user      User    @relation(fields: [userId], references: [id], onDelete:Cascade)
+  expenses  Expenses[]
+
+  @@index([userId])
+  @@map("merchants")
+}
+
+
