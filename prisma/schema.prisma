@@ -22,15 +22,15 @@ model User{
   email     String    @unique
   password  String    @map("password_hash")
   createdAt DateTime  @default(now()) @map("created_at")
-  updateAt  DateTime? @db.DateTime @map("updated_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
 
 //relation
 session         Session[]
-categories      Categories[]
-paymentSources  PaymentSources[]
-units           Units[]
-incomes         Incomes[]
-expenses        Expenses[]
+category        Category[]
+paymentSource  PaymentSource[]
+unit           Unit[]
+income         Income[]
+expense        Expense[]
 
 @@map("users")
 }
@@ -43,45 +43,47 @@ model Session{
   expires       DateTime
 
   //Relations
-  user User @relation(field: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@map("session")
+  @@map("sessions")
 }
 
 //Categories (self-references)
-model Categories{
+model Category{
   id        Int      @id @default(autoincrement())
-  userId    String   db.Uuid @map("user_id")
+  userId    String   @db.Uuid @map("user_id")
   name      String
 
   ///Relations
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expenses  Expenses[]
+  expenses  Expense[]
 
-  @@index)[userId]
-  @@map("categories")
+  @@index([userId])
+  @@unique([userId, name])
+  @@map("category")
 }
 
 ///sub-categories
-model SubCategories{
+model SubCategory{
   id          Int     @id @default(autoincrement())
   userId      String  @db.Uuid @map("user_id")
-  categoryId  Int?    @map("categories_id")
+  categoryId  Int?    @map("category_id")
   name        String
 
   //Relations
   user        User        @relation(fields: [userId], references:[id], onDelete:Cascade)
-  categories  Categories  @relation(fields:[categoryId], references:[id], onDelete:Cascade)
+  category  Category?  @relation(fields:[categoryId], references:[id], onDelete:Cascade)
 
   @@index([userId])
   @@index([categoryId])
-  @@map(""sub_categories)
+  @@unique([userId,categoryId,name])
+  @@map("sub_category")
 
 }
 
 /// paymentSources
-model PaymentSources{
+model PaymentSource{
   id              Int     @id @default(autoincrement())
   userId          String  @db.Uuid @map("user_id")
   name            String
@@ -89,8 +91,8 @@ model PaymentSources{
 
   //relation
   user      User    @relation(fields: [userId], references: [id], onDelete:Cascade)
-  incomes   Incomes[]
-  expenses  Expenses[]
+  income   Income[]
+  expense  Expense[]
 
   @@index([userId])
   @@map("payment_sources")
@@ -98,14 +100,14 @@ model PaymentSources{
 
 ///units
 model Unit{
-  id            @id       @default(autoincrement())
-  userId        @String   @db.Uuid  @map("user_id")
-  name          @String
-  abbreviation  @String?  @db.VaeChar(50)
+  id            Int      @id       @default(autoincrement())
+  userId        String   @db.Uuid  @map("user_id")
+  name          String
+  abbreviation  String?  @db.VarChar(50)
 
   //relation
   user          User    @relation(fields:[userId], references: [id], onDelete:Cascade)
-  expenses      Expenses[]
+  expense      Expense[]
 
   @@index([userId])
   @@map("units")
@@ -119,12 +121,12 @@ model Income{
   description      String?    @db.Text
   incomeDate       DateTime   @db.Date  @map("income_date")
   createdAt        DateTime   @default(now()) @map("created_at")
-  updateAt         DateTime?  @map("updated_at")
+  updatedAt         DateTime? @updatedAt  @map("updated_at")
   paymentSourceId  Int        @map("payment_source_id")
 
   //relation
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  paymentSource PaymentSource @relation(fields:[paymentSourceId], references:[id], onDelete:Cascade)
+  paymentSource PaymentSource @relation(fields:[paymentSourceId], references:[id], onDelete:Restrict)
 
 
   @@index([userId])
@@ -132,7 +134,21 @@ model Income{
   @@map("incomes")
 }
 
-///Expenses
+// MERCHANTS
+model Merchant {
+  id     Int    @id @default(autoincrement())
+  userId String @db.Uuid @map("user_id")
+  name   String
+
+  // Relations
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expenses Expense[]
+
+  @@index([userId])
+  @@map("merchants")
+}
+
+///Expense
 model Expense{
   id            Int       @id @default(autoincrement())
   userId        String    @db.Uuid  @map("user_id")
@@ -143,6 +159,72 @@ model Expense{
   purchaseDate  DateTime  @map("purchase_date")
   description   String?   @db.Text
   isPromo       Boolean   @default(false) @map("is_promo")
-  createdAt     DateTime  @default(false) @map("created_at")
-  updateAt      DateTime? @map("updated_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime? @updatedAt @map("updated_at")
+
+  categoryId    Int?      @map("category_id")
+  subCategoryId Int?      @map("sub_category_id")
+  merchantId    Int?      @map("merchant_id")
+  paymentSourceId Int?    @map("payment_source_id")
+  unitId        Int?      @map("unit_id")
+ 
+
+  //Relations
+  user            User          @relation(fields: [userId], references:[id], onDelete:Cascade)
+  merchant      Merchant?      @relation(fields:[merchantId], references:[id], onDelete:SetNull)
+  paymentSource PaymentSource? @relation(fields:[paymentSourceId], references:[id], onDelete:SetNull)
+  category      Category?     @relation(fields:[categoryId], references:[id], onDelete:SetNull)
+  unit          Unit?           @relation(fields:[unitId], references:[id], onDelete:SetNull)
+  subCategory   SubCategory?    @relation(fields:[subCategoryId], references:[id], onDelete:SetNull)
+  promo           Promo?
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([subCategoryId])
+  @@index([merchantId])
+  @@index([paymentSourceId])
+  @@index([unitId])
+
+  @@map("expenses")
+}
+
+//Promo
+model PromoType{
+  id          Int     @id @default(autoincrement())
+  type        String  
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime? @updatedAt  @map("updated_at")
+
+  //relation
+  Promos  Promo[]
+
+  @@map("promo_types")
+}
+
+//Promo
+
+model Promo{
+  id              Int     @id @default(autoincrement())
+  name            String  
+  percentage      Decimal?  @db.Decimal(5,2)
+  amount          Decimal?  @db.Decimal(15,2)
+  buyQty          Int?
+  getQty          Int?
+  bundleQty       Int?
+  bundlePrice     Decimal?  @db.Decimal(15,2)
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime? @updatedAt @map("updated_at")
+
+  promoTypeId     Int       @map("promo_type_id")
+  expenseId       Int      @unique @map("expense_id")
+
+
+  //relation
+  promoType     PromoType   @relation(fields:[promoTypeId], references:[id], onDelete:Restrict)
+  expense       Expense     @relation(fields:[expenseId], references:[id], onDelete:Cascade)
+
+  @@index([promoTypeId])
+  @@index([expenseId])
+
+  @@map("promos")
 }
